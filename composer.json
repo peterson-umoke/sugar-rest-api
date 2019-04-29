@@ -1,0 +1,11 @@
+{
+    "name": "umoke/sugar-rest-class",
+    "description": "A Simple Class to access the v4_1 rest api functionality for suitecrm or sugar_crm instance",
+    "authors": [
+        {
+            "name": "Peterson Umoke",
+            "email": "umoke10@hotmail.com"
+        }
+    ],
+    "require": {}
+}
