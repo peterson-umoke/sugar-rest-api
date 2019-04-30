@@ -2,6 +2,8 @@
 
 // class used for api for the suitecrm/sugarcrm
 
+namespace Umoke\SugarRestLibrary;
+
 /**
  * This class is used to perform basic crud operations for any sugarcrm instance
  * 
