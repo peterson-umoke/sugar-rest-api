@@ -1,6 +1,7 @@
 {
   "name": "umoke/sugar-rest-library",
   "description": "A Simple Class to access the v4_1 rest api functionality for suitecrm or sugar_crm instance",
+  "type": "library",
   "keywords": [
     "sugar-crm"
   ],
