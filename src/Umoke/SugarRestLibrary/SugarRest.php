@@ -568,38 +568,7 @@ class SugarRest
      */
     public function example()
     {
-        $entryArgs = array(
-            //Session id - retrieved from login call
-            'session' => $this->user_session_id,
-            //Module to get_entry_list for
-            'module_name' => 'Accounts',
-            //Filter query - Added to the SQL where clause,
-            // 'query' => "accounts.billing_address_city = 'Ohio'",
-            // 'query' => "accounts.name LIKE '%simply%'",
-            //Order by - unused
-            'query' => "",
-            'order_by' => '',
-            //Start with the first record
-            //Return the id and name fields
-            'offset' => 0,
-            'select_fields' => array('id', 'name',),
-            //Link to the "contacts" relationship and retrieve the
-            //First and last names.
-            'link_name_to_fields_array' => array(
-                // array(
-                //     'name' => 'contacts',
-                //     'value' => array(
-                //         'first_name',
-                //         'last_name',
-                //     ),
-                // ),
-            ),
-            // show a large result
-            'max_results' => 10000000000000000000000000000000,
-            //Do not show deleted
-            'deleted' => 0,
-        );
-        $result = $this->send_request('get_entry_list', $entryArgs);
+        $result = $this->select("Accounts");
         $this->results = $result;
 
         return $result;
