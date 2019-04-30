@@ -1,7 +1,5 @@
 <?php
 
-// class used for api for the suitecrm/sugarcrm
-
 namespace Umoke\SugarRestLibrary;
 
 /**

@@ -1,20 +1,28 @@
 {
   "name": "umoke/sugar-rest-library",
   "description": "A Simple Class to access the v4_1 rest api functionality for suitecrm or sugar_crm instance",
-  "type": "library",
+  "keywords": [
+    "sugar-crm"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/peterson-umoke/sugar-rest-api",
+  "support": {
+    "issues": "https://github.com/peterson-umoke/sugar-rest-api/issues",
+    "source": "https://github.com/peterson-umoke/sugar-rest-api"
+  },
   "authors": [
     {
       "name": "Peterson Umoke",
       "email": "umoke10@hotmail.com"
     }
   ],
-  "minimum-stability": "stable",
+  "minimum-stability": "dev",
   "require": {
     "php": ">=7.2.0"
   },
   "autoload": {
     "psr-0": {
-      "Umoke": "src/"
+      "Umoke\\SugarRestLibrary\\": "src/"
     }
   }
 }
