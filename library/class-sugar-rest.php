@@ -61,6 +61,20 @@ class SugarRest
     private $module_name;
 
     /**
+     * set the parameters
+     *
+     * @var mixed|string
+     */
+    private $parameters;
+
+    /**
+     * set the method been used at the present moment
+     *
+     * @var string
+     */
+    private $method;
+
+    /**
      * store the application name
      *
      * @var string
@@ -77,6 +91,8 @@ class SugarRest
         $this->application_name = "SugarCRM Application Name";
         $this->sugar_url_instance = rtrim($this->sugar_url_instance, "/"); // remove the trailing slash from the end of the string
         $this->rest_url =  $this->sugar_url_instance . $this->rest_base; // compile the url together
+
+        $this->login();
     }
 
     /**
@@ -131,7 +147,7 @@ class SugarRest
     {
         $userAuth = array(
             'user_name' => $this->username,
-            'password' => $this->password,
+            'password' => md5($this->password),
         );
         $appName = $this->application_name;
         $nameValueList = array();
@@ -142,7 +158,9 @@ class SugarRest
             'name_value_list' => $nameValueList
         );
 
-        $result = $this->send_request('login', $args);
+        $this->method = 'login';
+        $result = $this->send_request($this->method, $args);
+
         $this->user_session_id = $result['id'];
 
         return $this->user_session_id;
