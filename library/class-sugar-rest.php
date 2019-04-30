@@ -81,6 +81,13 @@ class SugarRest
      */
     public $application_name;
 
+    /**
+     * store import information concerning the user current session
+     * 
+     * @var mixed
+     */
+    public $is_user_admin;
+
     public function __construct($sugar_url_instance = "", $username = "", $password = "")
     {
         // set default props for certain things
@@ -91,7 +98,10 @@ class SugarRest
         $this->application_name = "SugarCRM Application Name";
         $this->sugar_url_instance = rtrim($this->sugar_url_instance, "/"); // remove the trailing slash from the end of the string
         $this->rest_url =  $this->sugar_url_instance . $this->rest_base; // compile the url together
+        $this->module_name = "";
+        $this->is_user_admin = 0;
 
+        // automatically login to the application upon inititation
         $this->login();
     }
 
@@ -122,6 +132,8 @@ class SugarRest
      */
     public function send_request(string $method, array $arguments)
     {
+        $this->method = $method;
+        $this->parameters = $arguments;
         $curl = curl_init($this->rest_url);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
         $post = array(
@@ -141,9 +153,9 @@ class SugarRest
     /**
      * used login to the application
      *
-     * @return int|bool
+     * @return void
      */
-    public function login()
+    private function login()
     {
         $userAuth = array(
             'user_name' => $this->username,
@@ -158,11 +170,144 @@ class SugarRest
             'name_value_list' => $nameValueList
         );
 
-        $this->method = 'login';
-        $result = $this->send_request($this->method, $args);
-
+        $result = $this->send_request('login', $args);
         $this->user_session_id = $result['id'];
+        $this->is_user_admin = $result['name_value_list']['user_is_admin']['value'];
+    }
 
-        return $this->user_session_id;
+    /**
+     * use this method to logout of the system
+     *
+     * @return void
+     */
+    public function logout()
+    {
+        $args = array(
+            'session' => $this->user_session_id
+        );
+
+        $this->send_request('logout', $args);
+    }
+
+    public function create($module_name, $args)
+    {
+        // 
+    }
+
+    public function select()
+    {
+        //
+    }
+
+    public function example_request()
+    {
+        //
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => 'Accounts',
+            'id' => array('bb254701-e064-c369-f8f6-5cc30283468b'),
+            'select_fields' => array('id', 'name'),
+            // 'query' => "accounts.billing_address_city = 'Ohio'",
+            // 'query' => "",
+            // 'order_by' => '',
+            // 'offset' => 0,
+            // 'select_fields' => array('id', 'name',),
+            // 'link_name_to_fields_array' => array(
+            //     array(
+            //         'name' => 'contacts',
+            //         'value' => array(
+            //             'first_name',
+            //             'last_name',
+            //         ),
+            //     ),
+            // ),
+            'max_results' => 10,
+            'deleted' => 0,
+        );
+        // $result = $this->send_request('get_entry_list', $entryArgs);
+        $result = $this->send_request('get_entries', $entryArgs);
+        print_r($result);
+    }
+
+    public function delete()
+    {
+        //
+    }
+
+    public function get($module_name, $id, $columns = array(), $relationships = array())
+    {
+        $this->module_name = $module_name; // store the module name
+        $id = is_string($id) ? array($id) : $id; // convert the id to array format if its a string
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'id' => $id,
+            'select_fields' => $columns,
+            'link_name_to_fields_array' => $relationships,
+        );
+
+        $this->method = 'get_entries';
+        $result = $this->send_request($this->method, $entryArgs);
+        return $result;
+    }
+
+    /**
+     * get a single record from the crm using the id of the record
+     *
+     * @param string $module_name
+     * @param string|array $id
+     * @param array $columns
+     * @param array $relationships
+     * @return array
+     */
+    public function get_record_by_id($module_name, $id, $columns = array(), $relationships = array())
+    {
+        $this->module_name = $module_name; // store the module name
+        $id = is_string($id) ? array($id) : $id; // convert the id to array format if its a string
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'id' => $id,
+            'select_fields' => $columns,
+            'link_name_to_fields_array' => $relationships,
+        );
+
+        $this->method = 'get_entries';
+        $result = $this->send_request($this->method, $entryArgs);
+        return $result;
+    }
+
+    public function update()
+    {
+        //
+    }
+
+    /**
+     * used to get the count of a module
+     *
+     * @param string $module_name
+     * @param string $query
+     * @param integer $deleted
+     * @return void
+     */
+    public function count($module_name, $query = '', $deleted = 0)
+    {
+        $this->module_name = $module_name; // store the module name
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'query' => $query,
+            'deleted' => $deleted,
+        );
+
+        $this->method = 'get_entries';
+        $result = $this->send_request($this->method, $entryArgs);
+        return $result['result_count'] ?? false;
     }
 }
