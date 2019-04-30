@@ -88,7 +88,21 @@ class SugarRest
      */
     public $is_user_admin;
 
-    public function __construct($sugar_url_instance = "", $username = "", $password = "")
+    /**
+     * store the results from the server
+     *
+     * @var mixed
+     */
+    private $results;
+
+    /**
+     * option to make results json or not
+     *
+     * @var bool
+     */
+    private $is_json_response;
+
+    public function __construct($sugar_url_instance = "", $username = "", $password = "", $jsonResponse = true)
     {
         // set default props for certain things
         if (!empty($sugar_url_instance)) $this->sugar_url_instance = $sugar_url_instance;
@@ -100,6 +114,7 @@ class SugarRest
         $this->rest_url =  $this->sugar_url_instance . $this->rest_base; // compile the url together
         $this->module_name = "";
         $this->is_user_admin = 0;
+        $this->is_json_response = $jsonResponse;
 
         // automatically login to the application upon inititation
         $this->login();
@@ -171,8 +186,17 @@ class SugarRest
         );
 
         $result = $this->send_request('login', $args);
-        $this->user_session_id = $result['id'];
-        $this->is_user_admin = $result['name_value_list']['user_is_admin']['value'];
+        $this->user_session_id = $result['id'] ?? 0;
+        $this->is_user_admin = $result['name_value_list']['user_is_admin']['value'] ?? 0;
+        $this->results = $result;
+
+        if (!empty($result['name']) && $result['name'] === 'Invalid Login' && $result['number'] === 10) {
+            $this->results = $result;
+            throw new Exception("Login Failed, Please Check Username and Password: " . json_encode($result), 1);
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -187,6 +211,33 @@ class SugarRest
         );
 
         $this->send_request('logout', $args);
+        $this->results = true;
+    }
+
+    /**
+     * get the currently logged in user
+     *
+     * @return string|void
+     */
+    public function current_user_id()
+    {
+        $args = array(
+            'session' => $this->user_session_id
+        );
+
+        $data = $this->send_request('get_user_id', $args);
+        $this->results = $data;
+        return $data['id'];
+    }
+
+    /**
+     * check if user is session is still active
+     *
+     * @return boolean
+     */
+    public function is_logged_in()
+    {
+        return $this->results = !empty($this->user_session_id) ? true : false;
     }
 
     /**
@@ -207,6 +258,9 @@ class SugarRest
         $this->module_name = $module_name; // store the module name
         $this->method = 'get_entry_list';
 
+        // print_r($relationships);
+        // die();
+
         // set the args
         $entryArgs = array(
             'session' => $this->user_session_id,
@@ -215,12 +269,13 @@ class SugarRest
             'order_by' => $order_by,
             'offset' => $offset,
             'select_fields' => $columns,
-            'max_results' => $max_results,
             'link_name_to_fields_array' => $relationships,
+            'max_results' => $max_results,
             'deleted' => $deleted,
         );
 
         $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
         return $result;
     }
 
@@ -245,6 +300,7 @@ class SugarRest
 
 
         $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
         return $result;
     }
 
@@ -270,6 +326,7 @@ class SugarRest
         );
 
         $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
         return $result['result_count'] ?? false;
     }
 
@@ -298,17 +355,26 @@ class SugarRest
         );
 
         $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
         return $result;
     }
 
     /**
-     * used to get all the relationships in a particular module
+     * get the relationships of mdoules
      *
      * @param string $module_name
-     * @param array $select_fields
+     * @param string $id
+     * @param string $link_field_name
+     * @param string $related_module_query
+     * @param array $related_fields
+     * @param array $related_module_link_name_to_fields_array
+     * @param integer $deleted
+     * @param string $order_by
+     * @param integer $offset
+     * @param integer $limit
      * @return void
      */
-    public function relationships($module_name, $id, $select_fields = array())
+    public function relationships($module_name, $id, $link_field_name = '', $related_module_query = '', $related_fields = array(), $related_module_link_name_to_fields_array = array(), $deleted = 0, $order_by = '', $offset = 0, $limit = 100)
     {
         $this->module_name = $module_name; // store the module name
         $this->method = 'get_relationships';
@@ -317,37 +383,233 @@ class SugarRest
         $entryArgs = array(
             'session' => $this->user_session_id,
             'module_name' => $this->module_name,
-            'fields' => $select_fields,
+            'module_id' => $id,
+            'link_field_name' => $link_field_name,
+            'related_module_query' => $related_module_query,
+            'related_fields' => $related_fields,
+            'related_module_link_name_to_fields_array' => $related_module_link_name_to_fields_array,
+            'deleted' => $deleted,
+            'order_by' => $order_by,
+            'offset' => $offset,
+            'limit' => $offset
         );
 
 
         $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
         return $result;
     }
 
-    public function delete()
+    /**
+     * update or create records
+     *
+     * @param string $module_name
+     * @param array $parameters - name_value pair array
+     * @return void
+     */
+    public function sets($module_name, $parameters)
     {
-        //
+        $this->module_name = $module_name; // store the module name
+        $this->method = 'set_entries';
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'name_value_lists' => $parameters,
+        );
+
+        $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
+        return $result;
     }
 
-
-    public function update_records()
+    /**
+     * update or create a single record
+     *
+     * @param string $module_name
+     * @param array $parameters - - name_value pair array
+     * @return void
+     */
+    public function set($module_name, $parameters)
     {
-        //
+        $this->module_name = $module_name; // store the module name
+        $this->method = 'set_entry';
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'name_value_list' => $parameters,
+        );
+
+        $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
+        return $result;
     }
 
-    public function update_record()
+    /**
+     * update or create relationship
+     *
+     * @param string $module_name
+     * @param string $id
+     * @param string $link_field_name
+     * @param array $related_ids
+     * @param array $parameters
+     * @param integer $delete
+     * @return void
+     */
+    public function update_relationship($module_name, $id, $link_field_name = '', $related_ids = array(), $parameters = array(), $delete = 0)
     {
-        // 
+        $this->module_name = $module_name; // store the module name
+        $this->method = 'set_relationships';
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'module_id' => $id,
+            'link_field_name' => $link_field_name,
+            'related_ids' => $related_ids,
+            'name_value_lists' => $parameters,
+            'delete' => $delete
+        );
+
+        $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
+        return $result;
     }
 
-    public function update_relationships()
+    /**
+     * update arrays of realtionships
+     *
+     * @param array $module_names
+     * @param array $module_ids
+     * @param array $link_field_names
+     * @param array $related_ids
+     * @param array $parameters
+     * @param array $delete_array
+     * @return mixed
+     */
+    public function update_relationships($module_names, $module_ids, $link_field_names, $related_ids, $parameters, $delete_array)
     {
-        //
+        $this->module_name = $module_names; // store the module name
+        $this->method = 'set_relationships';
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_names' => $this->module_name,
+            'module_ids' => $module_ids,
+            'link_field_names' => $link_field_names,
+            'related_ids' => $related_ids,
+            'name_value_lists' => $parameters,
+            'delete_array' => $delete_array
+        );
+
+        $result = $this->send_request($this->method, $entryArgs);
+        $this->results = $result;
+        return $result;
     }
 
-    public function update_relationship()
+    /**
+     * delete a record(s) using it id
+     *
+     * @param string|mixed $id
+     * @return bool
+     */
+    public function delete($module_name, $id)
     {
-        //
+        $this->module_name = $module_name; // store the module name
+        $fetch_data = $this->get($module_name, $id, ['id', 'name', 'deleted']);
+
+        if ($fetch_data['entry_list']) {
+            foreach ($fetch_data['entry_list'] as $i => $main_data) {
+                $this->set(
+                    $module_name,
+                    array(
+                        array(
+                            'name' => 'id',
+                            'value' => $main_data['id']
+                        ),
+                        array(
+                            'name' => 'deleted',
+                            'value' => 1
+                        )
+                    )
+                );
+            }
+
+            $this->results = true;
+            return true;
+        }
+
+        $this->results = false;
+        return false;
+    }
+
+    /**
+     * use this to automatically convert the response to json
+     *
+     * @return string|void|bool|mixed
+     */
+    private function toJSON()
+    {
+        if ($this->is_json_response) {
+            header('Content-Type: application/json');
+            echo json_encode($this->results);
+        }
+    }
+
+    /**
+     * example demo request
+     *
+     * @return void
+     */
+    public function example()
+    {
+        $entryArgs = array(
+            //Session id - retrieved from login call
+            'session' => $this->user_session_id,
+            //Module to get_entry_list for
+            'module_name' => 'Accounts',
+            //Filter query - Added to the SQL where clause,
+            // 'query' => "accounts.billing_address_city = 'Ohio'",
+            // 'query' => "accounts.name LIKE '%simply%'",
+            //Order by - unused
+            'query' => "",
+            'order_by' => '',
+            //Start with the first record
+            //Return the id and name fields
+            'offset' => 0,
+            'select_fields' => array('id', 'name',),
+            //Link to the "contacts" relationship and retrieve the
+            //First and last names.
+            'link_name_to_fields_array' => array(
+                // array(
+                //     'name' => 'contacts',
+                //     'value' => array(
+                //         'first_name',
+                //         'last_name',
+                //     ),
+                // ),
+            ),
+            // show a large result
+            'max_results' => 10000000000000000000000000000000,
+            //Do not show deleted
+            'deleted' => 0,
+        );
+        $result = $this->send_request('get_entry_list', $entryArgs);
+        $this->results = $result;
+
+        return $result;
+    }
+
+    /**
+     * once the class is been destroyed
+     */
+    public function __destruct()
+    {
+        $this->toJSON();
     }
 }
