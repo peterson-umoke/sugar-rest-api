@@ -58,7 +58,7 @@ class SugarRest
      *
      * @var string
      */
-    private $module_name;
+    public $module_name;
 
     /**
      * set the parameters
@@ -72,7 +72,7 @@ class SugarRest
      *
      * @var string
      */
-    private $method;
+    public $method;
 
     /**
      * store the application name
@@ -124,7 +124,7 @@ class SugarRest
     }
 
     /**
-     * used to send curl requests
+     * send curl requests
      *
      * @param string $method - the method or action to use
      * @param array $arguments - the arguments you want to pass
@@ -151,7 +151,7 @@ class SugarRest
     }
 
     /**
-     * used login to the application
+     * login to the application
      *
      * @return void
      */
@@ -176,7 +176,7 @@ class SugarRest
     }
 
     /**
-     * use this method to logout of the system
+     * logout of the crm
      *
      * @return void
      */
@@ -189,101 +189,63 @@ class SugarRest
         $this->send_request('logout', $args);
     }
 
-    public function create($module_name, $args)
-    {
-        // 
-    }
-
-    public function select()
-    {
-        //
-    }
-
-    public function example_request()
-    {
-        //
-        $entryArgs = array(
-            'session' => $this->user_session_id,
-            'module_name' => 'Accounts',
-            'id' => array('bb254701-e064-c369-f8f6-5cc30283468b'),
-            'select_fields' => array('id', 'name'),
-            // 'query' => "accounts.billing_address_city = 'Ohio'",
-            // 'query' => "",
-            // 'order_by' => '',
-            // 'offset' => 0,
-            // 'select_fields' => array('id', 'name',),
-            // 'link_name_to_fields_array' => array(
-            //     array(
-            //         'name' => 'contacts',
-            //         'value' => array(
-            //             'first_name',
-            //             'last_name',
-            //         ),
-            //     ),
-            // ),
-            'max_results' => 10,
-            'deleted' => 0,
-        );
-        // $result = $this->send_request('get_entry_list', $entryArgs);
-        $result = $this->send_request('get_entries', $entryArgs);
-        print_r($result);
-    }
-
-    public function delete()
-    {
-        //
-    }
-
-    public function get($module_name, $id, $columns = array(), $relationships = array())
+    /**
+     * retrieve a paginated list of results
+     *
+     * @param string $module_name
+     * @param array $columns
+     * @param integer $max_results
+     * @param string $query
+     * @param string $order_by
+     * @param integer $offset
+     * @param array $relationships
+     * @param integer $deleted
+     * @return void
+     */
+    public function select($module_name, $columns = array(), $max_results = 10, $query = '', $order_by = '', $offset = 0, $relationships = array(), $deleted = 0)
     {
         $this->module_name = $module_name; // store the module name
-        $id = is_string($id) ? array($id) : $id; // convert the id to array format if its a string
+        $this->method = 'get_entry_list';
 
         // set the args
         $entryArgs = array(
             'session' => $this->user_session_id,
             'module_name' => $this->module_name,
-            'id' => $id,
+            'query' => $query,
+            'order_by' => $order_by,
+            'offset' => $offset,
             'select_fields' => $columns,
+            'max_results' => $max_results,
             'link_name_to_fields_array' => $relationships,
+            'deleted' => $deleted,
         );
 
-        $this->method = 'get_entries';
         $result = $this->send_request($this->method, $entryArgs);
         return $result;
     }
 
     /**
-     * get a single record from the crm using the id of the record
+     * gets all the fields of a particular module
      *
      * @param string $module_name
-     * @param string|array $id
-     * @param array $columns
-     * @param array $relationships
-     * @return array
+     * @param array $select_fields
+     * @return void
      */
-    public function get_record_by_id($module_name, $id, $columns = array(), $relationships = array())
+    public function fields($module_name, $select_fields = array())
     {
         $this->module_name = $module_name; // store the module name
-        $id = is_string($id) ? array($id) : $id; // convert the id to array format if its a string
+        $this->method = 'get_module_fields';
 
         // set the args
         $entryArgs = array(
             'session' => $this->user_session_id,
             'module_name' => $this->module_name,
-            'id' => $id,
-            'select_fields' => $columns,
-            'link_name_to_fields_array' => $relationships,
+            'fields' => $select_fields,
         );
 
-        $this->method = 'get_entries';
+
         $result = $this->send_request($this->method, $entryArgs);
         return $result;
-    }
-
-    public function update()
-    {
-        //
     }
 
     /**
@@ -297,6 +259,7 @@ class SugarRest
     public function count($module_name, $query = '', $deleted = 0)
     {
         $this->module_name = $module_name; // store the module name
+        $this->method = 'get_entries_count';
 
         // set the args
         $entryArgs = array(
@@ -306,8 +269,85 @@ class SugarRest
             'deleted' => $deleted,
         );
 
-        $this->method = 'get_entries';
         $result = $this->send_request($this->method, $entryArgs);
         return $result['result_count'] ?? false;
+    }
+
+    /**
+     * get a single record from the crm using the id of the record
+     *
+     * @param string $module_name
+     * @param string|array $id
+     * @param array $columns
+     * @param array $relationships
+     * @return array
+     */
+    public function get($module_name, $id, $columns = array(), $relationships = array())
+    {
+        $this->module_name = $module_name; // store the module name
+        $this->method = 'get_entries';
+        $id = is_string($id) ? array($id) : $id; // convert the id to array format if its a string
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'id' => $id,
+            'select_fields' => $columns,
+            'link_name_to_fields_array' => $relationships,
+        );
+
+        $result = $this->send_request($this->method, $entryArgs);
+        return $result;
+    }
+
+    /**
+     * used to get all the relationships in a particular module
+     *
+     * @param string $module_name
+     * @param array $select_fields
+     * @return void
+     */
+    public function relationships($module_name, $id, $select_fields = array())
+    {
+        $this->module_name = $module_name; // store the module name
+        $this->method = 'get_relationships';
+
+        // set the args
+        $entryArgs = array(
+            'session' => $this->user_session_id,
+            'module_name' => $this->module_name,
+            'fields' => $select_fields,
+        );
+
+
+        $result = $this->send_request($this->method, $entryArgs);
+        return $result;
+    }
+
+    public function delete()
+    {
+        //
+    }
+
+
+    public function update_records()
+    {
+        //
+    }
+
+    public function update_record()
+    {
+        // 
+    }
+
+    public function update_relationships()
+    {
+        //
+    }
+
+    public function update_relationship()
+    {
+        //
     }
 }
