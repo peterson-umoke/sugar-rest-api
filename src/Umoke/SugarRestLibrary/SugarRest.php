@@ -1,5 +1,9 @@
 <?php
-
+/*!
+* SugarRest Library
+* Version 2.60.1
+* Released under the MIT License
+*/
 namespace Umoke\SugarRestLibrary;
 
 /**
