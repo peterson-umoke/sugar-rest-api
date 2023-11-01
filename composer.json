@@ -3,7 +3,10 @@
   "description": "A Simple Class to access the v4_1 rest api functionality for suitecrm or sugar_crm instance",
   "type": "library",
   "keywords": [
-    "sugar-crm"
+    "sugar-crm",
+    "suitecrm",
+    "crm",
+    "suite"
   ],
   "license": "MIT",
   "homepage": "https://github.com/peterson-umoke/sugar-rest-api",
@@ -19,7 +22,7 @@
   ],
   "minimum-stability": "stable",
   "require": {
-    "php": ">=7.0.0"
+    "php": ">=7.4"
   },
   "autoload": {
     "psr-0": {
