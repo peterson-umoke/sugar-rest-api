@@ -4,6 +4,7 @@
 * Version 2.60.1
 * Released under the MIT License
 */
+
 namespace Umoke\SugarRestLibrary;
 
 /**
@@ -106,13 +107,13 @@ class SugarRest
      */
     private $is_json_response;
 
-    public function __construct($sugar_url_instance = "", $username = "", $password = "", $jsonResponse = true)
+    public function __construct($sugar_url_instance = "", $username = "", $password = "", $jsonResponse = true, $restBase = "/service/v4_1/rest.php", $autoLogin = true)
     {
         // set default props for certain things
         if (!empty($sugar_url_instance)) $this->sugar_url_instance = $sugar_url_instance;
         if (!empty($username)) $this->username = $username;
         if (!empty($password)) $this->password = $password;
-        $this->rest_base = "/service/v4_1/rest.php";
+        $this->rest_base = $restBase;
         $this->application_name = "SugarCRM Application Name";
         $this->sugar_url_instance = rtrim($this->sugar_url_instance, "/"); // remove the trailing slash from the end of the string
         $this->rest_url =  $this->sugar_url_instance . $this->rest_base; // compile the url together
@@ -121,7 +122,9 @@ class SugarRest
         $this->is_json_response = $jsonResponse;
 
         // automatically login to the application upon inititation
-        $this->login();
+        if ($autoLogin) {
+            $this->login();
+        }
     }
 
     /**
@@ -174,7 +177,7 @@ class SugarRest
      *
      * @return void
      */
-    private function login()
+    public function login()
     {
         $userAuth = array(
             'user_name' => $this->username,
@@ -196,7 +199,7 @@ class SugarRest
 
         if (!empty($result['name']) && $result['name'] === 'Invalid Login' && $result['number'] === 10) {
             $this->results = $result;
-            throw new Exception("Login Failed, Please Check Username and Password: " . json_encode($result), 1);
+            throw new \Exception("Login Failed, Please Check Username and Password: " . json_encode($result), 1);
             return false;
         }
 
